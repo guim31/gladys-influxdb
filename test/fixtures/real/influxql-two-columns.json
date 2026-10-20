@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-influxdb-version": "v1.11.8"
+  },
+  "body": "{\"results\":[{\"statement_id\":0,\"series\":[{\"name\":\"power\",\"columns\":[\"time\",\"last\",\"last_1\"],\"values\":[[0,1250,231.4]]}]}]}\n"
+}

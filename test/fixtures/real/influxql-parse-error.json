@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "headers": {
+    "content-type": "application/json",
+    "x-influxdb-version": "v1.11.8"
+  },
+  "body": "{\"error\":\"error parsing query: found SELEC, expected SELECT, DELETE, SHOW, CREATE, DROP, EXPLAIN, GRANT, REVOKE, ALTER, SET, KILL at line 1, char 1\"}\n"
+}

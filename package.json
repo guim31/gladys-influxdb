@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
+  "name": "gladys-influxdb",
   "version": "1.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "InfluxDB for Gladys Assistant: Flux, InfluxQL or SQL queries as sensors, scene triggers on failures.",
   "type": "module",
   "main": "index.js",
   "scripts": {

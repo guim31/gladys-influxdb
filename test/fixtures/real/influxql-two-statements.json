@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-influxdb-version": "v1.11.8"
+  },
+  "body": "{\"results\":[{\"statement_id\":0,\"series\":[{\"name\":\"temperature\",\"columns\":[\"time\",\"last\"],\"values\":[[1792489718703,21.5]]}]},{\"statement_id\":1,\"series\":[{\"name\":\"humidity\",\"columns\":[\"time\",\"last\"],\"values\":[[1792489718703,48.2]]}]}]}\n"
+}

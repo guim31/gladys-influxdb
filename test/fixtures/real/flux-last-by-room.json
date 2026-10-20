@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "text/csv; charset=utf-8",
+    "x-influxdb-version": "v2.9.1"
+  },
+  "body": "#datatype,string,long,dateTime:RFC3339,dateTime:RFC3339,dateTime:RFC3339,double,string,string,string,string\r\n#group,false,false,true,true,false,false,true,true,true,true\r\n#default,_result,,,,,,,,,\r\n,result,table,_start,_stop,_time,_value,_field,_measurement,floor,room\r\n,,0,2026-10-20T08:50:29.383648854Z,2026-10-20T09:50:29.383648854Z,2026-10-20T09:48:38.371401968Z,21.5,value,temperature,0,kitchen\r\n,,1,2026-10-20T08:50:29.383648854Z,2026-10-20T09:50:29.383648854Z,2026-10-20T09:48:38.371401968Z,19.25,value,temperature,1,bedroom\r\n,,2,2026-10-20T08:50:29.383648854Z,2026-10-20T09:50:29.383648854Z,2026-10-20T09:48:38.371401968Z,15.75,value,temperature,2,attic\r\n\r\n"
+}

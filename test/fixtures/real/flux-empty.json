@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "text/csv; charset=utf-8",
+    "x-influxdb-version": "v2.9.1"
+  },
+  "body": "\r\n"
+}

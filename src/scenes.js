@@ -1,41 +1,65 @@
 // -----------------------------------------------------------------------------
-// Scene actions (SDK v0.14+, Gladys 5.1+).
+// Scene action handlers (manifest `scene_actions`, Gladys 5.1+).
 //
-// A scene action is an OPERATION a scene author places in a scene, with
-// parameters and a result: "identify this device", "take a snapshot", "clean
-// these rooms". Each one is declared in the manifest `scene_actions` field
-// (key, label, `fields` in the config_schema grammar, scalar `outputs`) and
-// handled here, keyed by that same `key`; index.js registers every entry with
-// `gladys.onSceneAction(key, ...)`.
-//
-// Scene TRIGGERS are the other direction ("this happened"): they are fired by
-// the device that observes the event, see src/devices/motionSensor.js.
-//
-// The rules that matter:
-//   - `fields` arrive RESOLVED: scene variables substituted, defaults applied,
-//     validated by the core; a `"source": "devices"` field is the chosen
-//     device external_id;
-//   - resolve an object of the declared `outputs` (scalars only), readable by
-//     the following actions of the scene, or `undefined` for none. Keys not
-//     declared in the manifest are dropped by the core;
-//   - throwing fails THIS action only: the scene logs it and continues. A
-//     scene action is never a condition: return an output and let the scene
-//     author gate on it;
-//   - never fire a scene event as a consequence of a received action: a scene
-//     bound to that event would loop through the integration.
+// The values of the added queries are already device states (scene
+// conditions, "read a device value"). This action does what a device cannot:
+// run a query once, in a scene, without making it a device — a figure for a
+// message ("2.4 kWh used today"), a check before an action.
 // -----------------------------------------------------------------------------
 
-import { createLogger } from '@gladysassistant/integration-sdk';
-import { signalDevice } from './devices/index.js';
+import { ERROR_KINDS } from './influxdb/client.js';
+import { parseAnswer, seriesNames } from './influxdb/model.js';
+import { MAX_QUERY_LENGTH, featureValue } from './queries.js';
+import { ACTION_TEXT, CONNECTION_TEXT, ERROR_TEXT, RESULT_TEXT, labelled, pick } from './texts.js';
 
-const logger = createLogger({ name: 'scenes' });
+// Series listed in the `text` output of a query, at most.
+export const MAX_LISTED_SERIES = 10;
+
+const fail = (text, language, cause) => {
+  throw new Error(pick(text, language), cause ? { cause } : undefined);
+};
 
 export const SCENE_ACTIONS = {
-  // The ack is awaited under the action's `timeout_seconds` (15 s in the
-  // manifest), counted from the moment the scene reaches the action.
-  async identify_device(gladys, { fields, config }) {
-    logger.info(`Scene action identify_device <- ${fields.device}`);
-    const signalled = await signalDevice(gladys, fields.device, config);
-    return { signalled };
+  async query_value(hub, { fields = {} }) {
+    const language = hub.config?.language;
+    if (!hub.client) {
+      fail(hub.config?.url ? hub.connectionStatus().message : ACTION_TEXT.noServer, language);
+    }
+    const text = typeof fields.query === 'string' ? fields.query.trim() : '';
+    if (!text || text.length > MAX_QUERY_LENGTH) {
+      fail(ACTION_TEXT.noQuery, language);
+    }
+    let parsed;
+    try {
+      parsed = parseAnswer(await hub.client.query(text));
+    } catch (err) {
+      const message = pick(ERROR_TEXT[err.kind] ?? ERROR_TEXT.http, language);
+      throw new Error(err.kind === ERROR_KINDS.QUERY ? `${message}: ${err.detail}` : message, {
+        cause: err,
+      });
+    }
+    if (parsed.error === 'stream') {
+      throw new Error(`${pick(ERROR_TEXT.query, language)}: ${parsed.detail}`);
+    }
+    if (parsed.error) {
+      fail(RESULT_TEXT[parsed.error] ?? CONNECTION_TEXT.noServer, language);
+    }
+    const series = parsed.series.filter((entry) => entry.value !== null);
+    const round = (value) => featureValue('number', value);
+    // Named by the labels that differ from one series to the other.
+    const names = seriesNames(series, '');
+    const named = series.slice(0, MAX_LISTED_SERIES).map((entry) => {
+      const name = names.get(entry.key);
+      return name ? labelled(name, round(entry.value), language) : String(round(entry.value));
+    });
+    return {
+      // No series: 0, and `series` says so.
+      value: series.length > 0 ? round(series[0].value) : 0,
+      series: series.length,
+      text:
+        series.length > named.length
+          ? `${named.join(', ')}, +${series.length - named.length}`
+          : named.join(', '),
+    };
   },
 };

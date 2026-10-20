@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": "[{\"room\":\"bedroom\",\"floor\":\"1\",\"value\":19.25},{\"room\":\"kitchen\",\"floor\":\"0\",\"value\":21.5},{\"room\":\"attic\",\"floor\":\"2\",\"value\":15.75}]"
+}

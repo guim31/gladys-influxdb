@@ -1,0 +1,5 @@
+{
+  "status": 404,
+  "headers": {},
+  "body": "{\"error\":\"query error: database not found: nodb\"}"
+}

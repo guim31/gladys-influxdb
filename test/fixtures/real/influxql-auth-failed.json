@@ -1,0 +1,8 @@
+{
+  "status": 401,
+  "headers": {
+    "content-type": "application/json",
+    "x-influxdb-version": "v1.11.8"
+  },
+  "body": "{\"error\":\"authorization failed\"}\n"
+}

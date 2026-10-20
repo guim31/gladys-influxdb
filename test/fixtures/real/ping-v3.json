@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-influxdb-version": "3.12.1"
+  },
+  "body": "{\"product_name\":\"InfluxDB 3 Core\",\"version\":\"3.12.1\",\"revision\":\"692ea4a994\",\"process_id\":\"5f094dda-b084-49dd-bcb2-b000e8b78a47\"}"
+}
