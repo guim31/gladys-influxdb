@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-20
+
 ### Added
 
 - InfluxDB in Gladys: one device per query, added with the "Add a query"
@@ -26,3 +28,6 @@ the notes of the version's GitHub Release.
   the chosen ones.
 - "Test the connection", self-signed certificates on request, texts and
   documentation in English, French, German and Spanish.
+
+[Unreleased]: https://github.com/guim31/gladys-influxdb/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-influxdb/releases/tag/v1.0.0
