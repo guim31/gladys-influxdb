@@ -220,7 +220,7 @@ export const ACTION_TEXT = {
   noServer: {
     en: 'No InfluxDB is configured.',
     fr: "Aucune InfluxDB n'est configurée.",
-    de: 'Keine InfluxDB ist konfiguriert.',
+    de: 'Es ist keine InfluxDB konfiguriert.',
     es: 'No hay ninguna InfluxDB configurada.',
   },
   noQuery: {

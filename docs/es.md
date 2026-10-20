@@ -53,8 +53,8 @@ En Gladys, abra la configuración de la integración:
   10 minutos.
 - **Aceptar certificados autofirmados**: solo para una dirección `https://`
   cuyo certificado tampoco reconoce su navegador.
-- **Idioma de los nombres**: el idioma de los resultados de escena y de los
-  mensajes.
+- **Idioma de los mensajes**: el idioma de los resultados de escena y de los
+  mensajes. Los nombres de las funciones vienen de sus etiquetas.
 
 Haga clic en **Probar la conexión**: responde con la versión de InfluxDB y las
 consultas, o con lo que falla.
@@ -93,7 +93,9 @@ Lo que forma una serie:
 - **SQL**: las columnas de texto nombran las series, cada columna numérica es
   un valor; gana la primera fila de una serie (`ORDER BY time DESC`).
 
-Los booleanos cuentan como 1 y 0; los valores de texto se ignoran.
+Los booleanos cuentan como 1 y 0; los valores de texto se ignoran. En SQL,
+seleccione solo las columnas de texto que nombran una serie: un estado que cambia
+crearía una serie nueva (las fechas escritas como texto se ignoran).
 
 ### 3. Añadir los dispositivos
 
@@ -129,7 +131,7 @@ vacío: todas. El botón **Actualizar** vuelve a leer InfluxDB.
 - **InfluxDB responde de nuevo**: tras el primer disparador, una lectura
   vuelve a funcionar. Da la duración de la caída en minutos.
 - **Una consulta falla**: InfluxDB rechaza una consulta (sintaxis, bucket o
-  tabla desconocidos). Una vez, hasta que la consulta vuelva a funcionar.
+  tabla desconocidos, sin permisos), o su respuesta no tiene ningún número. Una vez, hasta que la consulta vuelva a funcionar.
   Filtro: el nombre de la consulta (vacío: cualquiera). Da el nombre de la
   consulta y el error.
 

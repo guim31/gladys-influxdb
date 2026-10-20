@@ -56,7 +56,7 @@ test('"Read an InfluxDB value" in Flux and SQL, and without server', async (t) =
   assert.equal(sqlAck.data.outputs.series, 3);
   const none = await world(t, { config: { language: 'de' } });
   const refused = await none.fake.sceneAction('query_value', { query: 'x' });
-  assert.equal(refused.error, 'Keine InfluxDB ist konfiguriert.');
+  assert.equal(refused.error, 'Es ist keine InfluxDB konfiguriert.');
 });
 
 test('the widget: one row per series with its unit, an error row, a valid content', async (t) => {

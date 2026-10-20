@@ -55,7 +55,8 @@ Dans Gladys, ouvrez la configuration de l'intégration :
 - **Accepter les certificats auto-signés** : seulement pour une adresse en
   `https://` dont le certificat n'est pas reconnu par votre navigateur non
   plus.
-- **Langue des noms** : la langue des résultats de scène et des messages.
+- **Langue des messages** : la langue des résultats de scène et des messages.
+  Les noms des fonctionnalités viennent de vos étiquettes.
 
 Cliquez sur **Tester la connexion** : elle répond par la version d'InfluxDB et
 les requêtes, ou par ce qui ne va pas.
@@ -94,7 +95,9 @@ Ce qui fait une série :
   numérique est une valeur ; la première ligne d'une série l'emporte
   (`ORDER BY time DESC`).
 
-Les booléens comptent pour 1 et 0 ; les valeurs texte sont ignorées.
+Les booléens comptent pour 1 et 0 ; les valeurs texte sont ignorées. En SQL, ne
+sélectionnez que les colonnes de texte qui nomment une série : un statut qui
+change ferait une nouvelle série (les dates écrites en texte sont ignorées).
 
 ### 3. Ajouter les appareils
 
@@ -130,7 +133,7 @@ appareils) ; vide : toutes. Le bouton **Actualiser** relit InfluxDB.
 - **InfluxDB répond de nouveau** : après le premier déclencheur, une lecture
   fonctionne de nouveau. Donne la durée de la panne en minutes.
 - **Une requête échoue** : InfluxDB refuse une requête (syntaxe, bucket ou
-  table inconnus). Une fois, jusqu'à ce que la requête remarche. Filtre : le
+  table inconnus, pas de droit dessus), ou sa réponse n'a aucun nombre. Une fois, jusqu'à ce que la requête remarche. Filtre : le
   nom de la requête (vide : n'importe laquelle). Donne le nom de la requête et
   l'erreur.
 

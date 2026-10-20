@@ -12,8 +12,9 @@
 import http from 'node:http';
 import https from 'node:https';
 
-// A query answering thousands of series weighs a few MB: beyond, it is cut.
-export const MAX_BODY_BYTES = 8 * 1024 * 1024;
+// A query answering thousands of rows weighs a few MB: beyond, it is cut (the
+// sandbox has 256 MB, and a query should give one value per series anyway).
+export const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
 /**
  * @param {string} url absolute URL

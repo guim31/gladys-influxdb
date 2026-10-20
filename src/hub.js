@@ -9,7 +9,8 @@
 // to 10 minutes, beyond the fixed list of the core scheduler.
 //
 // One read = /ping (the health check and the version), then one request per
-// query (a query that reads nothing while there is none, to check the access). The events already announced are kept in /data (src/store.js): a
+// query, after a query that reads nothing (it checks the token, the organization
+// and the database). The queries run five at a time. The events already announced are kept in /data (src/store.js): a
 // restart neither announces a failure twice nor forgets to say the server is
 // back.
 // -----------------------------------------------------------------------------
@@ -18,7 +19,7 @@ import { DEVICE_TRANSPORTS, createLogger } from '@gladysassistant/integration-sd
 import { buildQueryDevice, parseQueryId, queryIds, queryValues } from './devices.js';
 import { hostOf, isCloud } from './config.js';
 import { FailureLog } from './logs.js';
-import { ERROR_KINDS, InfluxClient, InfluxError, SERVER_ERRORS } from './influxdb/client.js';
+import { ERROR_KINDS, InfluxClient, InfluxError, QUERY_SERVER_ERRORS } from './influxdb/client.js';
 import { parseAnswer, seriesNames } from './influxdb/model.js';
 import { MAX_QUERIES, MAX_SERIES, parseQueryFields, queryId, restoreQuery } from './queries.js';
 import {
@@ -54,6 +55,7 @@ export const HUB_TIMINGS = {
 // Failed reads in a row before "InfluxDB is unreachable" is announced: a
 // restart of InfluxDB (an update) does not start the scenes.
 export const DOWN_AFTER_READS = 2;
+const QUERY_CONCURRENCY = 5;
 
 const MAX_STATES_PER_REQUEST = 100;
 // States per minute, at most (Gladys accepts 300): the budget of a read is
@@ -172,6 +174,8 @@ export class InfluxHub {
 
   async reconfigure(config) {
     const changed = this.signature !== signature(config);
+    // At start, the outage announced before the restart still stands.
+    const otherServer = changed && this.signature !== null;
     this.config = config;
     if (changed) {
       this.generation += 1; // a read in progress for the old server is ignored
@@ -192,8 +196,14 @@ export class InfluxHub {
       this.results.clear();
       this.error = null;
       this.failedReads = 0;
+      this.downSince = null;
       this.readAt = 0;
       this.transports.clear();
+      if (otherServer && this.events.down) {
+        // Another server (or none): the outage of the old one is not ended by it.
+        this.events.down = null;
+        this.save();
+      }
     }
     await this.pollAll({ publish: true });
     this.schedulePoll();
@@ -274,11 +284,13 @@ export class InfluxHub {
     const results = new Map();
     try {
       version = await this.client.version();
-      if (this.queries.size === 0) {
-        await this.client.check();
-      }
-      for (const query of this.queries.values()) {
-        results.set(query.id, await this.runQuery(query.query));
+      await this.client.check();
+      const queries = [...this.queries.values()];
+      // Five at a time: 20 slow queries stay within "Test the connection".
+      for (let at = 0; at < queries.length; at += QUERY_CONCURRENCY) {
+        const batch = queries.slice(at, at + QUERY_CONCURRENCY);
+        const answers = await Promise.all(batch.map((query) => this.runQuery(query.query)));
+        batch.forEach((query, index) => results.set(query.id, answers[index]));
       }
     } catch (caught) {
       error = asError(caught);
@@ -324,7 +336,7 @@ export class InfluxHub {
         error: parsed.error ? { result: parsed.error } : null,
       };
     } catch (err) {
-      if (SERVER_ERRORS.has(err.kind)) {
+      if (QUERY_SERVER_ERRORS.has(err.kind)) {
         throw err;
       }
       return { series: [], error: { kind: err.kind, detail: err.detail ?? err.message } };
@@ -342,6 +354,7 @@ export class InfluxHub {
       }
       this.error = error;
       this.failedReads += 1;
+      this.downSince ??= this.now();
       return; // the last values stand
     }
     if (this.error) {
@@ -352,6 +365,7 @@ export class InfluxHub {
     }
     this.error = null;
     this.failedReads = 0;
+    this.downSince = null;
     this.version = version;
     let changed = false;
     for (const [id, result] of results) {
@@ -418,7 +432,7 @@ export class InfluxHub {
         error_kind: this.error.kind,
       });
       if (accepted) {
-        this.events.down = { since: this.now() };
+        this.events.down = { since: this.downSince ?? this.now() };
         this.save();
       }
     } else if (!this.error && this.events.down) {

@@ -313,16 +313,16 @@
       "key": "language",
       "type": "select",
       "label": {
-        "en": "Language of the names",
-        "fr": "Langue des noms",
-        "de": "Sprache der Namen",
-        "es": "Idioma de los nombres"
+        "en": "Language of the messages",
+        "fr": "Langue des messages",
+        "de": "Sprache der Meldungen",
+        "es": "Idioma de los mensajes"
       },
       "description": {
-        "en": "Language of the feature names (set when a device is added) and of the scene results.",
-        "fr": "Langue des noms des fonctionnalités (fixés à l'ajout d'un appareil) et des résultats de scène.",
-        "de": "Sprache der Funktionsnamen (beim Hinzufügen eines Geräts festgelegt) und der Szenen-Ergebnisse.",
-        "es": "Idioma de los nombres de las funciones (fijados al añadir un dispositivo) y de los resultados de escena."
+        "en": "Language of the scene results and messages (the feature names come from your tags).",
+        "fr": "Langue des résultats de scène et des messages (les noms des fonctionnalités viennent de vos étiquettes).",
+        "de": "Sprache der Szenen-Ergebnisse und Meldungen (die Funktionsnamen kommen aus deinen Tags).",
+        "es": "Idioma de los resultados de escena y de los mensajes (los nombres de las funciones vienen de sus etiquetas)."
       },
       "required": false,
       "default": "fr",
@@ -630,10 +630,10 @@
         "es": "Una consulta falla"
       },
       "description": {
-        "en": "InfluxDB refuses a query that worked (syntax, bucket, table). Once, until it works again.",
-        "fr": "InfluxDB refuse une requête qui marchait (syntaxe, bucket, table). Une fois, jusqu'à ce qu'elle remarche.",
-        "de": "InfluxDB lehnt eine Abfrage ab (Syntax, Bucket, Tabelle). Einmal, bis sie wieder funktioniert.",
-        "es": "InfluxDB rechaza una consulta (sintaxis, bucket, tabla). Una vez, hasta que vuelva a funcionar."
+        "en": "InfluxDB refuses a query (syntax, bucket, rights) or it gives no number. Once, until it works again.",
+        "fr": "InfluxDB refuse une requête (syntaxe, bucket, droits) ou elle ne donne aucun nombre. Une fois, jusqu'à ce qu'elle remarche.",
+        "de": "InfluxDB lehnt eine Abfrage ab (Syntax, Bucket, Rechte) oder sie liefert keine Zahl. Einmal, bis sie wieder funktioniert.",
+        "es": "InfluxDB rechaza una consulta (sintaxis, bucket, permisos) o no da ningún número. Una vez, hasta que vuelva a funcionar."
       },
       "fields": [
         {

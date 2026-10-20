@@ -50,7 +50,8 @@ In Gladys, open the configuration of the integration:
 - **Refresh interval**: 1 minute by default, from 30 seconds to 10 minutes.
 - **Accept self-signed certificates**: only for an `https://` address whose
   certificate your browser does not trust either.
-- **Language of the names**: the language of the scene results and messages.
+- **Language of the messages**: the language of the scene results and
+  messages. The feature names come from your tags.
 
 Click **Test the connection**: it answers with the version of InfluxDB and
 the queries, or with what goes wrong.
@@ -85,7 +86,9 @@ What makes a series:
 - **SQL**: the text columns name the series, every numeric column is a value;
   the first row of a series wins (`ORDER BY time DESC`).
 
-Booleans count as 1 and 0; text values are left out.
+Booleans count as 1 and 0; text values are left out. In SQL, select only the
+text columns that name a series: a status that changes would make a new series
+(dates written as text are ignored).
 
 ### 3. Add the devices
 
@@ -119,7 +122,7 @@ settings, choose the queries to show (their devices); empty: all. The
 - **InfluxDB answers again**: after the first trigger, a read works again.
   Gives the length of the outage in minutes.
 - **A query fails**: InfluxDB refuses a query (syntax, unknown bucket or
-  table). Once, until the query works again. Filter: the query name (empty:
+  table, no right on it), or its answer has no number. Once, until the query works again. Filter: the query name (empty:
   any). Gives the query name and the error.
 
 What was announced is kept: a restart neither announces it twice nor forgets

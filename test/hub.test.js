@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { normalizeConfig } from '../src/config.js';
 import { parseQueryId, queryIds, seriesFeatureKey } from '../src/devices.js';
 import { TRIGGERS } from '../src/hub.js';
 import { seriesKey } from '../src/influxdb/model.js';
@@ -238,7 +239,7 @@ test('server unreachable after two failed reads, back once, the outage duration'
   await w.hub.pollAll();
   await w.hub.pollAll();
   assert.deepEqual(w.fake.sceneEvents.slice(1), [
-    { key: TRIGGERS.SERVER_UP, data: { duration_minutes: 14 } },
+    { key: TRIGGERS.SERVER_UP, data: { duration_minutes: 15 } },
   ]);
   assert.deepEqual(w.fake.connectionStatus, { connected: true });
   assert.equal(transportOf(w, device), 'local');
@@ -388,4 +389,32 @@ test('a normal reading cycle writes nothing at info level, and never a secret', 
   await w.hub.pollAll();
   assert.equal(lines.length, 2, lines.join('\n'));
   assert.ok(!lines.join('\n').includes('secret'));
+});
+
+test('a query refused for its own database or rights fails alone, the others go on', async (t) => {
+  const w = await world(t);
+  await addQuery(w, { name: 'Rooms', query: ROOMS.v1 });
+  await addQuery(w, { name: 'Other', query: 'SELECT last(value) FROM "other"."autogen"."m"' });
+  w.influx.answers['SELECT last(value) FROM "other"."autogen"."m"'] =
+    fixtures['influxql-database-not-found'];
+  await createDevices(w);
+  await w.hub.pollAll();
+  assert.deepEqual(w.fake.connectionStatus, { connected: true });
+  assert.deepEqual(
+    w.fake.sceneEvents.map((event) => [event.key, event.data.name]),
+    [[TRIGGERS.QUERY_FAILED, 'Other']],
+  );
+  const rooms = w.fake.discoveredDevices.find((device) => device.name === 'Rooms');
+  assert.equal(transportOf(w, rooms.external_id), 'local');
+});
+
+test('an outage of a server left for another one is not ended by it', async (t) => {
+  const w = await world(t);
+  w.influx.failure = 'down';
+  await w.hub.pollAll();
+  await w.hub.pollAll();
+  assert.equal(w.fake.sceneEvents.length, 1);
+  w.influx.failure = null;
+  await w.hub.reconfigure(normalizeConfig({ ...CONFIGS.v1, url: '192.0.2.20/x' }));
+  assert.equal(w.fake.sceneEvents.length, 1, 'no "answers again" for another server');
 });

@@ -253,8 +253,8 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
   ne pas l'envoyer.
 - **Santé** : `/ping` donne la version (`X-Influxdb-Version`) sans authentification sur 1.x et 2.x
   (204), **avec** jeton sur 3 Core (200 JSON, 401 sinon). Comme `/ping` ne vérifie rien sur 1.x et
-  2.x, une lecture **sans requête** lance une requête qui ne lit rien (`client.check()` : `array.from`
-  en Flux, `SHOW MEASUREMENTS LIMIT 1`, `SELECT 1`) pour que « Tester la connexion » voie un jeton
+  2.x, **chaque lecture** lance d'abord une requête qui ne lit rien (`client.check()` : `array.from`
+  en Flux, `SHOW RETENTION POLICIES`, `SELECT 1`) pour que « Tester la connexion » voie un jeton
   ou une organisation faux. Testé avec un jeton en lecture seule sur 2.9.
 - **Réponses réelles** (`test/fixtures/real`, InfluxDB 1.11.8, 2.9.1, 3 Core 3.12.1) : Flux en
   erreur = 400 `{code:"invalid"}` (compilation, exécution) ou 404 `{code:"not found"}` (bucket) →
@@ -270,16 +270,41 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
   (`last`, `last_1` sans `AS`) ; plusieurs instructions → `_statement`. SQL = colonnes texte =
   étiquettes, colonnes nombre/booléen = valeurs, la première ligne d'une série l'emporte.
   Booléen = 1/0, texte ignoré ; des lignes sans aucun nombre = `not_number`, refusé à l'ajout.
+  Relecture du 20/10 : en Flux, le nom du `yield()` est dans `#default` (cellule `result` vide), et
+  après `window()` sans agrégat la **dernière** table d'une même clé l'emporte ; en InfluxQL,
+  `_statement` dès qu'il y a plusieurs résultats, vides compris (identité stable) ; en SQL, une
+  colonne texte au format date n'est pas une étiquette.
   Identité, noms figés, plafonds 20 × 20, `<type>_<série>` : comme gladys-prometheus.
 - **Déclencheurs** : `server_unreachable` après **2 lectures de suite** en erreur serveur (une mise à
   jour d'InfluxDB ne lance pas les scènes), `server_back` seulement s'il a été annoncé (durée en
   minutes), `query_failed` une fois par épisode (une requête vide n'est pas un échec), ré-armé
   quand la requête remarche. L'état annoncé vit dans `/data` (`events`) : pas de doublon ni d'oubli
-  au redémarrage. Les erreurs `organization`/`database`/`auth` sont des erreurs serveur, donc
-  n'émettent pas `query_failed`.
+  au redémarrage. Seul `check()` décide d'une erreur serveur `auth`/`database` : la même erreur
+  venue d'une requête (base lue par son nom complet, jeton sans droit sur un bucket) ne concerne
+  qu'elle (`QUERY_SERVER_ERRORS`). Panne datée du premier échec ; changer de serveur oublie la panne
+  annoncée de l'ancien. Requêtes lancées 5 par 5 (20 requêtes lentes tiennent dans le délai de
+  « Tester la connexion »).
 - **Badge** : `cloud` si l'hôte finit par `influxdata.com`/`.io` (InfluxDB Cloud), `local` sinon,
   `unreachable` en panne. Manifeste `transports: ["local", "cloud"]` (consigne du brief, Cloud non
   testé faute de compte).
 - **Widget `values`** : une ligne par série (dernière valeur + unité, séparateur décimal de la
   langue), réglage `queries` (`multi_select`, `source: "devices"`) qui reçoit des `external_id`
   d'appareils.
+
+## Vérifié sur de vrais InfluxDB (20/10/2026)
+
+Image Docker de l'intégration avec les contraintes du bac à sable (`--cap-drop ALL --security-opt
+no-new-privileges --read-only --memory 256m --pids-limit 256`, volume `/data`, réseau en pont
+`gladys-test-influxdb`, aucun port publié) contre les images officielles `influxdb:1.11` (1.11.8,
+authentification active), `influxdb:2` (2.9.1) et `influxdb:3-core` (3.12.1), remplies de données
+de test.
+
+- Sans Gladys : reconnexion du SDK en backoff, pas de plantage, aucun secret dans les logs,
+  ~19 Mo au repos.
+- Faux Gladys du SDK dans le conteneur verrouillé : Flux avec un jeton en lecture seule, Flux avec
+  l'organisation tirée de l'adresse de l'interface (`orgID`), InfluxQL en Basic sur 1.11, InfluxQL
+  par jeton sur la compatibilité de 2.9 et sur 3 Core, SQL sur 3 Core : appareils, états, widget,
+  « Lire une valeur InfluxDB » ; jeton, mot de passe, organisation et base faux, SQL demandé à un
+  InfluxDB 2, hôte inconnu, `https://` sur un port HTTP ; requête refusée et requête texte à
+  l'ajout ; InfluxDB 1 arrêté puis relancé : `server_unreachable` puis `server_back` ;
+  redémarrage sans doublon.

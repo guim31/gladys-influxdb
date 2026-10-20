@@ -137,12 +137,16 @@ export function parseFluxCsv(text) {
         columns: cells,
         types: annotations['#datatype'] ?? [],
         group: (annotations['#group'] ?? []).map((cell) => cell === 'true'),
+        defaults: annotations['#default'] ?? [],
         rows: [],
       };
       tables.push(table);
       continue;
     }
-    table.rows.push(cells);
+    // An empty cell takes the #default of its column (the result name).
+    table.rows.push(
+      cells.map((cell, index) => (cell === '' ? (table.defaults[index] ?? '') : cell)),
+    );
   }
   return tables;
 }
@@ -194,7 +198,9 @@ export function parseFlux(text) {
       }
     }
   }
-  return finish([...byTable.values()], rows);
+  // The latest wins: a window() without aggregate gives one table per
+  // window, with the same group key once _start and _stop are left out.
+  return finish([...byTable.values()], rows, { latest: true });
 }
 
 /** Series of an InfluxQL answer (`/query`, JSON). */
@@ -206,7 +212,9 @@ export function parseInfluxql(text) {
     return { series: [], error: RESULT_ERRORS.BAD_ANSWER };
   }
   const results = Array.isArray(parsed?.results) ? parsed.results : [];
-  const statements = results.filter((result) => Array.isArray(result?.series)).length;
+  // Counted on every result, empty or not: the identity of a series must not
+  // depend on whether the other statement has data.
+  const statements = results.length;
   const found = [];
   let rows = 0;
   for (const result of results) {
@@ -252,6 +260,8 @@ export function parseSql(text) {
     return { series: [], error: RESULT_ERRORS.BAD_ANSWER };
   }
   const isValue = (raw) => typeof raw === 'number' || typeof raw === 'boolean';
+  // A text that is a date (date_bin() AS bucket) would make a series per row.
+  const isDate = (raw) => /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(raw);
   const valueNames = [
     ...new Set(
       rows.flatMap((row) =>
@@ -265,7 +275,8 @@ export function parseSql(text) {
   for (const row of rows) {
     const labels = Object.fromEntries(
       Object.entries(row ?? {}).filter(
-        ([name, raw]) => name !== 'time' && typeof raw === 'string' && !valueNames.includes(name),
+        ([name, raw]) =>
+          name !== 'time' && typeof raw === 'string' && !isDate(raw) && !valueNames.includes(name),
       ),
     );
     for (const name of valueNames) {
@@ -282,13 +293,13 @@ export function parseSql(text) {
   return finish([...byKey.values()], rows.length);
 }
 
-/** Keys, duplicates merged (the first wins), and the "no number" error. */
-function finish(found, rows) {
+/** Keys, duplicates merged (the first wins, or the latest), and the "no number" error. */
+function finish(found, rows, { latest = false } = {}) {
   const seen = new Map();
   for (const { labels, value } of found) {
     const clean = sortedLabels(labels);
     const key = seriesKey(clean);
-    if (!seen.has(key)) {
+    if (latest || !seen.has(key)) {
       seen.set(key, { key, labels: clean, value });
     }
   }

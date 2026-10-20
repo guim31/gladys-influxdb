@@ -53,7 +53,8 @@ getestet. Rückmeldungen sind willkommen:
   10 Minuten.
 - **Selbstsignierte Zertifikate akzeptieren**: nur für eine `https://`-Adresse,
   deren Zertifikat auch dein Browser nicht anerkennt.
-- **Sprache der Namen**: die Sprache der Szenen-Ergebnisse und Meldungen.
+- **Sprache der Meldungen**: die Sprache der Szenen-Ergebnisse und Meldungen.
+  Die Funktionsnamen kommen aus deinen Tags.
 
 Klicke auf **Verbindung testen**: Die Antwort nennt die Version von InfluxDB
 und die Abfragen, oder was nicht stimmt.
@@ -90,7 +91,9 @@ Was eine Serie ausmacht:
 - **SQL**: Die Textspalten benennen die Serien, jede numerische Spalte ist ein
   Wert; die erste Zeile einer Serie gewinnt (`ORDER BY time DESC`).
 
-Boolesche Werte zählen als 1 und 0; Textwerte werden ignoriert.
+Boolesche Werte zählen als 1 und 0; Textwerte werden ignoriert. Wähle in SQL nur
+die Textspalten aus, die eine Serie benennen: Ein wechselnder Status ergäbe eine
+neue Serie (als Text geschriebene Daten werden ignoriert).
 
 ### 3. Die Geräte hinzufügen
 
@@ -128,7 +131,8 @@ alle. Der Knopf **Aktualisieren** liest InfluxDB neu.
 - **InfluxDB antwortet wieder**: Nach dem ersten Auslöser klappt ein
   Lesevorgang wieder. Liefert die Ausfalldauer in Minuten.
 - **Eine Abfrage scheitert**: InfluxDB lehnt eine Abfrage ab (Syntax,
-  unbekannter Bucket oder Tabelle). Einmal, bis die Abfrage wieder
+  unbekannter Bucket oder Tabelle, keine Rechte darauf), oder ihre Antwort hat
+  keine Zahl. Einmal, bis die Abfrage wieder
   funktioniert. Filter: der Name der Abfrage (leer: beliebig). Liefert den
   Namen der Abfrage und den Fehler.
 

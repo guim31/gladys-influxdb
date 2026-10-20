@@ -269,3 +269,44 @@ test('query fields, ids and values', () => {
   assert.equal(featureValue('temperature', 21.456), 21.46);
   assert.equal(featureValue('number', null), null);
 });
+
+test('review fixes: yields, windows, empty statements, date columns, organization id', async () => {
+  const head = '#datatype,string,long,double,string\r\n#group,false,false,false,true\r\n';
+  // Two yield(): the result name is in #default; tables restart at 0.
+  const yields =
+    `${head}#default,min,,,\r\n,result,table,_value,room\r\n,,0,1,a\r\n\r\n` +
+    `${head}#default,max,,,\r\n,result,table,_value,room\r\n,,0,9,a\r\n`;
+  assert.deepEqual(
+    parseFlux(yields).series.map((entry) => [entry.labels._result, entry.value]),
+    [
+      ['min', 1],
+      ['max', 9],
+    ],
+  );
+  // window() without aggregate: one table per window, the latest wins.
+  const windows = `${head}#default,_result,,,\r\n,result,table,_value,room\r\n,,0,1,a\r\n,,1,2,a\r\n`;
+  assert.deepEqual(
+    parseFlux(windows).series.map((entry) => entry.value),
+    [2],
+  );
+  // A statement without data does not change the identity of the other one.
+  const both = parseInfluxql(body('influxql-two-statements')).series[0].key;
+  const one = JSON.parse(body('influxql-two-statements'));
+  delete one.results[1].series;
+  assert.equal(parseInfluxql(JSON.stringify(one)).series[0].key, both);
+  // A date as text (date_bin() AS bucket) does not make a series per row.
+  const sql = JSON.stringify([
+    { bucket: '2026-10-20T10:00:00', value: 2 },
+    { bucket: '2026-10-20T09:00:00', value: 1 },
+  ]);
+  assert.deepEqual(values(parseSql(sql)), { Q: 2 });
+  // The answer of InfluxDB 2.9.1 to an unknown orgID.
+  const unknownId = clientWith('v2', 'flux-org-not-found', {
+    request: async () => ({
+      status: 400,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      body: '{"code":"invalid","message":"failed to decode request body: organization not found"}',
+    }),
+  });
+  await assert.rejects(unknownId.query('q'), { kind: ERROR_KINDS.ORGANIZATION });
+});

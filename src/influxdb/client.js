@@ -45,6 +45,17 @@ export const SERVER_ERRORS = new Set([
   ERROR_KINDS.DATABASE,
 ]);
 
+// Of those, the ones a user query can also meet for itself (a database read by
+// its full name, a token without access to one bucket): from a query, they
+// concern that query only. check() tells the server apart.
+export const QUERY_SERVER_ERRORS = new Set([
+  ERROR_KINDS.UNREACHABLE,
+  ERROR_KINDS.TLS,
+  ERROR_KINDS.NOT_INFLUX,
+  ERROR_KINDS.REDIRECT,
+  ERROR_KINDS.ORGANIZATION,
+]);
+
 export class InfluxError extends Error {
   /**
    * @param {string} kind one of ERROR_KINDS
@@ -108,7 +119,9 @@ const DATABASE_NOT_FOUND = /database not found/i;
 // read-only token too).
 const CHECKS = {
   v2: 'import "array"\narray.from(rows: [{_value: 1}])',
-  v1: 'SHOW MEASUREMENTS LIMIT 1',
+  // Refused with "database not found" on InfluxDB 1 and 3 (not on the
+  // compatibility API of InfluxDB 2, which answers an empty list).
+  v1: 'SHOW RETENTION POLICIES',
   v3: 'SELECT 1',
 };
 
@@ -238,8 +251,8 @@ export class InfluxClient {
 
   /**
    * A query that reads nothing, to check the token, the organization and the
-   * database when there is no query yet (/ping checks nothing of them on
-   * InfluxDB 1 and 2). Only the errors that concern the server are thrown.
+   * database at every read (/ping checks nothing of them on InfluxDB 1 and
+   * 2). Only the errors that concern the server are thrown.
    * @throws {InfluxError}
    */
   async check() {
@@ -269,7 +282,7 @@ export class InfluxClient {
     if (status === 200 && isCsv) {
       return response.body;
     }
-    if (/organization .* not found/i.test(detail)) {
+    if (/organization\b.*\bnot found/i.test(detail)) {
       throw new InfluxError(ERROR_KINDS.ORGANIZATION, `Organization not found: ${detail}`, {
         status,
         detail,
