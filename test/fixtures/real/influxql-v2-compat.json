@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-influxdb-version": "v2.9.1"
+  },
+  "body": "{\"results\":[{\"statement_id\":0,\"series\":[{\"name\":\"temperature\",\"tags\":{\"room\":\"attic\"},\"columns\":[\"time\",\"last\"],\"values\":[[1792489718371,15.75]]},{\"name\":\"temperature\",\"tags\":{\"room\":\"bedroom\"},\"columns\":[\"time\",\"last\"],\"values\":[[1792489718371,19.25]]},{\"name\":\"temperature\",\"tags\":{\"room\":\"kitchen\"},\"columns\":[\"time\",\"last\"],\"values\":[[1792489718371,21.5]]}]}]}\n"
+}

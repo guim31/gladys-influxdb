@@ -1,61 +1,186 @@
-# Demo Devices Template
+# InfluxDB
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Bring into Gladys the measures your [InfluxDB](https://www.influxdata.com/)
+already holds — collected by Telegraf, a script, another home automation
+system: the queries you choose become sensors (the temperature of each room,
+the power of a solar inverter, the energy of the day), and your scenes react
+when InfluxDB stops answering or a query fails. A dashboard widget shows the
+last values at a glance.
 
-## What you get
+The integration reads InfluxDB on your local network, or InfluxDB Cloud. It
+only reads: nothing is written into InfluxDB.
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+Tested against real InfluxDB 1.11, 2.9 and 3 Core 3.12 servers (official
+Docker images, data of several series and tags, Flux, InfluxQL and SQL
+queries, a read-only token). InfluxDB Cloud uses the same API, untested.
+Feedback welcome:
+[github.com/guim31/gladys-influxdb/issues](https://github.com/guim31/gladys-influxdb/issues).
 
-## Configuration
+## What you need
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+- Gladys Assistant 5.1.0 or later.
+- InfluxDB 1.x, 2.x, 3 Core or Enterprise, reachable from the Gladys machine
+  (port 8086, 8181 for InfluxDB 3), or an InfluxDB Cloud account.
+- Access to it:
+  - InfluxDB 2 and Cloud: an **API token** with read access to your buckets,
+    and the name of the **organization**;
+  - InfluxDB 1: a user and password (if authentication is on);
+  - InfluxDB 3: a token (unless it runs without authentication).
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+## Getting started
 
-## Actions
+### 1. Configure the integration
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+In Gladys, open the configuration of the integration:
 
-## Scenes
+- **API and query language**:
+  - **InfluxDB 2 or Cloud (Flux)**: queries in Flux;
+  - **InfluxQL (InfluxDB 1, 2 or 3)**: queries in InfluxQL. It also works with
+    InfluxDB 2 (its v1 compatibility API, the bucket as database) and InfluxDB 3;
+  - **InfluxDB 3 (SQL)**: queries in SQL.
+- **InfluxDB address**: e.g. `http://192.168.1.2:8086`. A bare `192.168.1.2`
+  gets port 8086 (8181 for InfluxDB 3). The address of a page of the
+  InfluxDB 2 interface works too, and gives the organization.
+- **Organization (InfluxDB 2, Cloud)**: its name or its id.
+- **Database (InfluxQL, SQL)**: e.g. `telegraf`; with InfluxDB 2, the name of
+  the bucket.
+- **API token**: InfluxDB 2, Cloud and 3. A read-only token is enough.
+- **User (InfluxDB 1)**, **Password (InfluxDB 1)**: InfluxDB 1 with
+  authentication. The token wins when both are filled.
+- **Refresh interval**: 1 minute by default, from 30 seconds to 10 minutes.
+- **Accept self-signed certificates**: only for an `https://` address whose
+  certificate your browser does not trust either.
+- **Language of the messages**: the language of the scene results and
+  messages. The feature names come from your tags.
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+Click **Test the connection**: it answers with the version of InfluxDB and
+the queries, or with what goes wrong.
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+### 2. Add your queries
+
+Still in the configuration, the **Add a query** action asks for:
+
+- **Name**: the name of the device, e.g. `Room temperatures`. Adding a query
+  with the same name again replaces it (same device).
+- **Query (Flux, InfluxQL or SQL)**: in the language of the chosen API. It must
+  give one value per series: the last one, a mean… For example:
+  - InfluxQL: `SELECT last(value) FROM temperature WHERE time > now() - 1h GROUP BY room`;
+  - Flux: `from(bucket: "home") |> range(start: -1h) |> filter(fn: (r) => r._measurement == "temperature") |> last()`;
+  - SQL: `SELECT room, last_value(value ORDER BY time) AS value FROM temperature WHERE time > now() - INTERVAL '1 hour' GROUP BY room`.
+- **Type**: what Gladys shows. Number (no unit), Temperature (°C),
+  Humidity (%), Percentage (%), Power (W), Energy (kWh). Convert in the query
+  when needed (`/ 1000` for kWh from Wh).
+- **Tag naming the series (optional)**: when the query returns several series,
+  each one becomes a feature named after this tag (e.g. `room`). Empty: the
+  tags that differ from one series to the other.
+
+The query is checked against InfluxDB first: an error is answered with the
+message of InfluxDB, and nothing is saved. **Remove a query** takes a name.
+
+What makes a series:
+
+- **Flux**: one per table (the group key: tags, `_measurement`, `_field`), its
+  last row. After a `pivot()`, every numeric column is its own series.
+- **InfluxQL**: one per series of the answer (`GROUP BY` tags), its last row.
+  `SELECT last(a), last(b)` gives one series per column.
+- **SQL**: the text columns name the series, every numeric column is a value;
+  the first row of a series wins (`ORDER BY time DESC`).
+
+Booleans count as 1 and 0; text values are left out. In SQL, select only the
+text columns that name a series: a status that changes would make a new series
+(dates written as text are ignored).
+
+### 3. Add the devices
+
+Open the **Discover** tab of the integration and add the devices to follow.
+
+## The devices
+
+**One device per query**, with one feature per series, 20 at most, of the
+type chosen. The name of a feature is set when the series is first seen, and
+Gladys keeps it once the device is added. A series seen later adds a feature:
+Gladys then proposes **Update** in the Discover tab. A series that disappears
+keeps its feature, without new values.
+
+A device is marked unreachable while InfluxDB does not answer, and keeps its
+last values. Its badge says cloud for InfluxDB Cloud.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **InfluxDB values** widget shows the last value of each query, one row
+per series with its unit, or "Error" for a query InfluxDB refuses. In its
+settings, choose the queries to show (their devices); empty: all. The
+**Refresh** button reads InfluxDB again.
+
+## Scenes
+
+### Triggers
+
+- **InfluxDB is unreachable**: two reads in a row fail (no answer, access
+  refused, organization or database not found). Gives the error, and its key
+  (`unreachable`, `auth`, `organization`, `database`…).
+- **InfluxDB answers again**: after the first trigger, a read works again.
+  Gives the length of the outage in minutes.
+- **A query fails**: InfluxDB refuses a query (syntax, unknown bucket or
+  table, no right on it), or its answer has no number. Once, until the query works again. Filter: the query name (empty:
+  any). Gives the query name and the error.
+
+What was announced is kept: a restart neither announces it twice nor forgets
+to say InfluxDB is back. A query with no data for now is not a failure.
+
+### Actions
+
+- **Read an InfluxDB value**: runs a query once, without creating a device.
+  Results: the value of the first series (0 when there is none), the number of
+  series, and the values as text (`kitchen: 21.5, attic: 15.75`).
+
+### Scene ideas
+
+- **InfluxDB is unreachable** → send "InfluxDB: {error}" to your phone; and
+  **InfluxDB answers again** → "InfluxDB is back after {duration} minutes".
+- A temperature of the "Room temperatures" device above 26 °C → close the
+  shutters of that room.
+- Every evening → **Read an InfluxDB value** with the energy of the day
+  (`SELECT sum(kwh) FROM solar WHERE time > now() - 1d`) and send "Solar
+  today: {value} kWh".
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"does not answer"**: check the address and the port from the Gladys
+  machine (`curl -i http://192.168.1.2:8086/ping`). Gladys runs the
+  integration in a container on a bridge network: `localhost` is the
+  container, not the host.
+- **"access refused"**: the token, or the user and password, are refused; or
+  the token has no read access to this bucket or database.
+- **"organization not found"**, **"database not found"**: check the name in
+  the configuration (InfluxDB 2: the organization of the token).
+- **"certificate refused"**: tick **Accept self-signed certificates**.
+- **"the address redirects"**: enter the `https://` address.
+- **"no InfluxDB API of the chosen version at this address"**: another service
+  answers there, or the API chosen is not the one of the server (SQL needs
+  InfluxDB 3).
+- **"the result has no number"**: the query returns text only; select a
+  numeric field.
+- **A query shows no value**: **Test the connection** tells which query has no
+  data for now. Try it in the InfluxDB interface (Data Explorer), or with the
+  `influx` command.
+- **Logs**: in Gladys, the integration page shows its logs. Add `LOG_LEVEL=debug`
+  for every read.
+
+## Limits
+
+- 20 queries, and 20 series per query. A query runs at every refresh: bound it
+  in time (`WHERE time > now() - 1h`, `range(start: -1h)`) so that InfluxDB
+  does not scan your whole history every minute.
+- Read only: the states of Gladys cannot be written into InfluxDB from an
+  external integration.
+- The queries are stored in the data volume of the integration: reinstalling
+  it from scratch loses them (add them again with the same names: same
+  devices).
+- Values are rounded to two decimals.
+- One database (InfluxQL, SQL) per configuration; in InfluxQL, another one is
+  reachable by its full name (`"db"."autogen"."measurement"`).
+- InfluxDB Cloud: same API, not tested for lack of an account; mind the read
+  quotas of your plan (one request per query and per refresh).
+- Tested with the test tools of the Gladys SDK and real InfluxDB servers, not
+  yet in a real Gladys instance: feedback welcome.

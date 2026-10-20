@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "text/html; charset=utf-8",
+    "x-influxdb-version": "v2.9.1"
+  },
+  "body": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"description\" content=\"InfluxDB is a time series platform, purpose-built by InfluxData for storing metrics and events, provides real-time visibility into stacks, sensors, and systems.\"><title>InfluxDB</title><base href=\"/\"><base href=\"\"><link rel=\"icon\" href=\"/favicon.ico\"></head><body><div id=\"react-root\" data-basepath=\"\"></div><script defer=\"defer\" src=\"/49abc3a946.js\"></script></body></html>"
+}

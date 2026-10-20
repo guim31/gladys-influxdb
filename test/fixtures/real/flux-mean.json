@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "text/csv; charset=utf-8",
+    "x-influxdb-version": "v2.9.1"
+  },
+  "body": "#datatype,string,long,dateTime:RFC3339,dateTime:RFC3339,double\r\n#group,false,false,true,true,false\r\n#default,_result,,,,\r\n,result,table,_start,_stop,_value\r\n,,0,2026-10-20T08:50:29.393183928Z,2026-10-20T09:50:29.393183928Z,18.833333333333332\r\n\r\n"
+}

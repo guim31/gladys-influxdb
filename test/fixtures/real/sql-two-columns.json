@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": "[{\"meter\":\"main\",\"watts\":1250,\"volts\":231.4}]"
+}

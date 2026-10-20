@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": "{\"results\":[{\"statement_id\":0,\"series\":[{\"name\":\"temperature\",\"tags\":{\"room\":\"attic\"},\"columns\":[\"time\",\"last\"],\"values\":[[1792489718763,15.75]]},{\"name\":\"temperature\",\"tags\":{\"room\":\"bedroom\"},\"columns\":[\"time\",\"last\"],\"values\":[[1792489718763,19.25]]},{\"name\":\"temperature\",\"tags\":{\"room\":\"kitchen\"},\"columns\":[\"time\",\"last\"],\"values\":[[1792489718763,21.5]]}]}]}"
+}

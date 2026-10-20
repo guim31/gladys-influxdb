@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "widget"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +31,24 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only: src/app.js registers the handlers before connect()
+src/app.js                        every SDK handler -> the hub (also used by the tests)
+src/hub.js                        reading timer, queries, states (changes + heartbeat), scene events
+src/devices.js                    query devices, one feature per series, values
+src/queries.js                    query types (category, unit, bounds), "Add a query" fields, ids
+src/influxdb/client.js            /ping, Flux, InfluxQL and SQL requests, error kinds
+src/influxdb/model.js             Flux CSV, InfluxQL and SQL answers -> series, series names
+src/influxdb/http.js              node:http/https (self-signed certificates on request)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget `values` (manifest `widgets`)
+src/texts.js                      connection, error, report, action texts (4 languages)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+src/store.js                      /data/influxdb-state.json (queries, series names, events announced)
+src/logs.js                       repeated failures logged once, then once when they heal
+gladys-assistant-integration.json manifest: name, config_schema, actions, triggers, widget...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (en and fr mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+                                  and helpers/fakeInflux.js (real answers in test/fixtures/real)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +78,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, widget texts, manifest texts, and `docs/{en,fr,de,es}.md`, kept in
+  sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +242,69 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## InfluxDB (propre à ce dépôt)
+
+- **Trois API au choix** (`api_version`), une seule par configuration : `v2` = Flux (`POST
+/api/v2/query?org=` ou `orgID=` si 16 hex, `Authorization: Token`, CSV annoté demandé par
+  `dialect.annotations`), `v1` = InfluxQL (`GET /query?db=&q=&epoch=ms`, Basic ou `Token` : marche
+  aussi sur l'API de compatibilité d'InfluxDB 2 et sur InfluxDB 3 Core), `v3` = SQL (`GET
+/api/v3/query_sql?db=&format=json`, `Bearer`). Basic avec un jeton est refusé par InfluxDB 3 (400) :
+  ne pas l'envoyer.
+- **Santé** : `/ping` donne la version (`X-Influxdb-Version`) sans authentification sur 1.x et 2.x
+  (204), **avec** jeton sur 3 Core (200 JSON, 401 sinon). Comme `/ping` ne vérifie rien sur 1.x et
+  2.x, **chaque lecture** lance d'abord une requête qui ne lit rien (`client.check()` : `array.from`
+  en Flux, `SHOW RETENTION POLICIES`, `SELECT 1`) pour que « Tester la connexion » voie un jeton
+  ou une organisation faux. Testé avec un jeton en lecture seule sur 2.9.
+- **Réponses réelles** (`test/fixtures/real`, InfluxDB 1.11.8, 2.9.1, 3 Core 3.12.1) : Flux en
+  erreur = 400 `{code:"invalid"}` (compilation, exécution) ou 404 `{code:"not found"}` (bucket) →
+  erreur de requête ; organisation inconnue = **400** `invalid` « organization name … not found » →
+  erreur serveur `organization`. InfluxQL : syntaxe = 400 `{error}` sur 1.x, mais **200 avec
+  `results[].error`** sur 3 Core ; base inconnue = 200 + `results[].error` « database not found »
+  (→ `database`, erreur serveur). SQL : erreur = **400 en texte brut** ; base inconnue = 404 JSON.
+  InfluxDB 2 répond **200 HTML** (son interface) à tout chemin inconnu : `not_influx`.
+- **Séries** : Flux = une par table, étiquettes = clé de groupe **sans `_start`/`_stop`** (elles
+  changent à chaque lecture), dernière ligne ; sans `_value` (après `pivot()`), chaque colonne
+  numérique hors clé de groupe est une série `_field` = même identité que sans pivot. InfluxQL = une
+  par série (`_measurement` + tags), dernière ligne ; plusieurs colonnes → `_field` = nom de colonne
+  (`last`, `last_1` sans `AS`) ; plusieurs instructions → `_statement`. SQL = colonnes texte =
+  étiquettes, colonnes nombre/booléen = valeurs, la première ligne d'une série l'emporte.
+  Booléen = 1/0, texte ignoré ; des lignes sans aucun nombre = `not_number`, refusé à l'ajout.
+  Relecture du 20/10 : en Flux, le nom du `yield()` est dans `#default` (cellule `result` vide), et
+  après `window()` sans agrégat la **dernière** table d'une même clé l'emporte ; en InfluxQL,
+  `_statement` dès qu'il y a plusieurs résultats, vides compris (identité stable) ; en SQL, une
+  colonne texte au format date n'est pas une étiquette.
+  Identité, noms figés, plafonds 20 × 20, `<type>_<série>` : comme gladys-prometheus.
+- **Déclencheurs** : `server_unreachable` après **2 lectures de suite** en erreur serveur (une mise à
+  jour d'InfluxDB ne lance pas les scènes), `server_back` seulement s'il a été annoncé (durée en
+  minutes), `query_failed` une fois par épisode (une requête vide n'est pas un échec), ré-armé
+  quand la requête remarche. L'état annoncé vit dans `/data` (`events`) : pas de doublon ni d'oubli
+  au redémarrage. Seul `check()` décide d'une erreur serveur `auth`/`database` : la même erreur
+  venue d'une requête (base lue par son nom complet, jeton sans droit sur un bucket) ne concerne
+  qu'elle (`QUERY_SERVER_ERRORS`). Panne datée du premier échec ; changer de serveur oublie la panne
+  annoncée de l'ancien. Requêtes lancées 5 par 5 (20 requêtes lentes tiennent dans le délai de
+  « Tester la connexion »).
+- **Badge** : `cloud` si l'hôte finit par `influxdata.com`/`.io` (InfluxDB Cloud), `local` sinon,
+  `unreachable` en panne. Manifeste `transports: ["local", "cloud"]` (consigne du brief, Cloud non
+  testé faute de compte).
+- **Widget `values`** : une ligne par série (dernière valeur + unité, séparateur décimal de la
+  langue), réglage `queries` (`multi_select`, `source: "devices"`) qui reçoit des `external_id`
+  d'appareils.
+
+## Vérifié sur de vrais InfluxDB (20/10/2026)
+
+Image Docker de l'intégration avec les contraintes du bac à sable (`--cap-drop ALL --security-opt
+no-new-privileges --read-only --memory 256m --pids-limit 256`, volume `/data`, réseau en pont
+`gladys-test-influxdb`, aucun port publié) contre les images officielles `influxdb:1.11` (1.11.8,
+authentification active), `influxdb:2` (2.9.1) et `influxdb:3-core` (3.12.1), remplies de données
+de test.
+
+- Sans Gladys : reconnexion du SDK en backoff, pas de plantage, aucun secret dans les logs,
+  ~19 Mo au repos.
+- Faux Gladys du SDK dans le conteneur verrouillé : Flux avec un jeton en lecture seule, Flux avec
+  l'organisation tirée de l'adresse de l'interface (`orgID`), InfluxQL en Basic sur 1.11, InfluxQL
+  par jeton sur la compatibilité de 2.9 et sur 3 Core, SQL sur 3 Core : appareils, états, widget,
+  « Lire une valeur InfluxDB » ; jeton, mot de passe, organisation et base faux, SQL demandé à un
+  InfluxDB 2, hôte inconnu, `https://` sur un port HTTP ; requête refusée et requête texte à
+  l'ajout ; InfluxDB 1 arrêté puis relancé : `server_unreachable` puis `server_back` ;
+  redémarrage sans doublon.

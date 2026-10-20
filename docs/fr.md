@@ -1,67 +1,204 @@
-# Template de démonstration
+# InfluxDB
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Faites entrer dans Gladys les mesures que votre
+[InfluxDB](https://www.influxdata.com/) contient déjà — collectées par
+Telegraf, un script, une autre domotique : les requêtes que vous choisissez
+deviennent des capteurs (la température de chaque pièce, la puissance d'un
+onduleur solaire, l'énergie du jour), et vos scènes réagissent quand InfluxDB
+ne répond plus ou qu'une requête échoue. Un widget de tableau de bord montre
+les dernières valeurs d'un coup d'œil.
 
-## Ce que vous obtenez
+L'intégration lit InfluxDB sur votre réseau local, ou InfluxDB Cloud. Elle ne
+fait que lire : rien n'est écrit dans InfluxDB.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+Testée contre de vrais serveurs InfluxDB 1.11, 2.9 et 3 Core 3.12 (images
+Docker officielles, données à plusieurs séries et étiquettes, requêtes Flux,
+InfluxQL et SQL, jeton en lecture seule). InfluxDB Cloud utilise la même API,
+non testée. Vos retours sont les bienvenus :
+[github.com/guim31/gladys-influxdb/issues](https://github.com/guim31/gladys-influxdb/issues).
 
-## Configuration
+## Ce qu'il faut
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+- Gladys Assistant 5.1.0 ou plus récent.
+- InfluxDB 1.x, 2.x, 3 Core ou Enterprise, joignable depuis la machine de
+  Gladys (port 8086, 8181 pour InfluxDB 3), ou un compte InfluxDB Cloud.
+- Un accès :
+  - InfluxDB 2 et Cloud : un **jeton d'API** qui peut lire vos buckets, et le
+    nom de l'**organisation** ;
+  - InfluxDB 1 : un utilisateur et un mot de passe (si l'authentification est
+    active) ;
+  - InfluxDB 3 : un jeton (sauf s'il tourne sans authentification).
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Pour commencer
 
-## Actions
+### 1. Configurer l'intégration
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+Dans Gladys, ouvrez la configuration de l'intégration :
 
-## Scènes
+- **API et langage de requête** :
+  - **InfluxDB 2 ou Cloud (Flux)** : requêtes en Flux ;
+  - **InfluxQL (InfluxDB 1, 2 ou 3)** : requêtes en InfluxQL. Fonctionne aussi
+    avec InfluxDB 2 (son API de compatibilité v1, le bucket comme base) et
+    InfluxDB 3 ;
+  - **InfluxDB 3 (SQL)** : requêtes en SQL.
+- **Adresse d'InfluxDB** : ex. `http://192.168.1.2:8086`. Un simple
+  `192.168.1.2` prend le port 8086 (8181 pour InfluxDB 3). L'adresse d'une
+  page de l'interface d'InfluxDB 2 convient aussi, et donne l'organisation.
+- **Organisation (InfluxDB 2, Cloud)** : son nom ou son identifiant.
+- **Base de données (InfluxQL, SQL)** : ex. `telegraf` ; avec InfluxDB 2, le
+  nom du bucket.
+- **Jeton d'API** : InfluxDB 2, Cloud et 3. Un jeton en lecture seule suffit.
+- **Utilisateur (InfluxDB 1)**, **Mot de passe (InfluxDB 1)** : InfluxDB 1 avec
+  authentification. Le jeton l'emporte si les deux sont remplis.
+- **Intervalle de rafraîchissement** : 1 minute par défaut, de 30 secondes à
+  10 minutes.
+- **Accepter les certificats auto-signés** : seulement pour une adresse en
+  `https://` dont le certificat n'est pas reconnu par votre navigateur non
+  plus.
+- **Langue des messages** : la langue des résultats de scène et des messages.
+  Les noms des fonctionnalités viennent de vos étiquettes.
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+Cliquez sur **Tester la connexion** : elle répond par la version d'InfluxDB et
+les requêtes, ou par ce qui ne va pas.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+### 2. Ajouter vos requêtes
+
+Toujours dans la configuration, l'action **Ajouter une requête** demande :
+
+- **Nom** : le nom de l'appareil, ex. `Températures des pièces`. Ajouter une
+  requête du même nom la remplace (même appareil).
+- **Requête (Flux, InfluxQL ou SQL)** : dans le langage de l'API choisie. Elle
+  doit donner une valeur par série : la dernière, une moyenne… Par exemple :
+  - InfluxQL : `SELECT last(value) FROM temperature WHERE time > now() - 1h GROUP BY room` ;
+  - Flux : `from(bucket: "home") |> range(start: -1h) |> filter(fn: (r) => r._measurement == "temperature") |> last()` ;
+  - SQL : `SELECT room, last_value(value ORDER BY time) AS value FROM temperature WHERE time > now() - INTERVAL '1 hour' GROUP BY room`.
+- **Type** : ce que Gladys affiche. Nombre (sans unité), Température (°C),
+  Humidité (%), Pourcentage (%), Puissance (W), Énergie (kWh). Convertissez
+  dans la requête si besoin (`/ 1000` pour des kWh à partir de Wh).
+- **Étiquette qui nomme les séries (facultatif)** : quand la requête renvoie
+  plusieurs séries, chacune devient une fonctionnalité nommée d'après cette
+  étiquette (ex. `room`). Vide : les étiquettes qui changent d'une série à
+  l'autre.
+
+La requête est d'abord vérifiée auprès d'InfluxDB : une erreur est répondue
+avec le message d'InfluxDB, et rien n'est enregistré. **Supprimer une
+requête** demande un nom.
+
+Ce qui fait une série :
+
+- **Flux** : une par table (la clé de groupe : étiquettes, `_measurement`,
+  `_field`), sa dernière ligne. Après un `pivot()`, chaque colonne numérique
+  est sa propre série.
+- **InfluxQL** : une par série de la réponse (étiquettes du `GROUP BY`), sa
+  dernière ligne. `SELECT last(a), last(b)` donne une série par colonne.
+- **SQL** : les colonnes de texte nomment les séries, chaque colonne
+  numérique est une valeur ; la première ligne d'une série l'emporte
+  (`ORDER BY time DESC`).
+
+Les booléens comptent pour 1 et 0 ; les valeurs texte sont ignorées. En SQL, ne
+sélectionnez que les colonnes de texte qui nomment une série : un statut qui
+change ferait une nouvelle série (les dates écrites en texte sont ignorées).
+
+### 3. Ajouter les appareils
+
+Ouvrez l'onglet **Découverte** de l'intégration et ajoutez les appareils à
+suivre.
+
+## Les appareils
+
+**Un appareil par requête**, avec une fonctionnalité par série, 20 au plus,
+du type choisi. Le nom d'une fonctionnalité est fixé à la première apparition
+de la série, et Gladys le garde une fois l'appareil ajouté. Une série vue plus
+tard ajoute une fonctionnalité : Gladys propose alors **Mettre à jour** dans
+l'onglet Découverte. Une série qui disparaît garde sa fonctionnalité, sans
+nouvelles valeurs.
+
+Un appareil est marqué injoignable tant qu'InfluxDB ne répond pas, et garde
+ses dernières valeurs. Son badge indique cloud pour InfluxDB Cloud.
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **Valeurs InfluxDB** montre la dernière valeur de chaque requête,
+une ligne par série avec son unité, ou « Erreur » pour une requête refusée par
+InfluxDB. Dans ses réglages, choisissez les requêtes à montrer (leurs
+appareils) ; vide : toutes. Le bouton **Actualiser** relit InfluxDB.
+
+## Scènes
+
+### Déclencheurs
+
+- **InfluxDB est injoignable** : deux lectures de suite échouent (pas de
+  réponse, accès refusé, organisation ou base introuvable). Donne l'erreur, et
+  sa clé (`unreachable`, `auth`, `organization`, `database`…).
+- **InfluxDB répond de nouveau** : après le premier déclencheur, une lecture
+  fonctionne de nouveau. Donne la durée de la panne en minutes.
+- **Une requête échoue** : InfluxDB refuse une requête (syntaxe, bucket ou
+  table inconnus, pas de droit dessus), ou sa réponse n'a aucun nombre. Une fois, jusqu'à ce que la requête remarche. Filtre : le
+  nom de la requête (vide : n'importe laquelle). Donne le nom de la requête et
+  l'erreur.
+
+Ce qui a été annoncé est gardé : un redémarrage ne l'annonce pas deux fois, et
+n'oublie pas de dire qu'InfluxDB est revenu. Une requête sans donnée pour le
+moment n'est pas un échec.
+
+### Actions
+
+- **Lire une valeur InfluxDB** : exécute une requête une fois, sans créer
+  d'appareil. Résultats : la valeur de la première série (0 s'il n'y en a
+  aucune), le nombre de séries, et les valeurs en texte
+  (`kitchen : 21.5, attic : 15.75`).
+
+### Idées de scènes
+
+- **InfluxDB est injoignable** → envoyer « InfluxDB : {erreur} » sur votre
+  téléphone ; et **InfluxDB répond de nouveau** → « InfluxDB est revenu après
+  {durée} minutes ».
+- Une température de l'appareil « Températures des pièces » au-dessus de
+  26 °C → fermer les volets de cette pièce.
+- Chaque soir → **Lire une valeur InfluxDB** avec l'énergie du jour
+  (`SELECT sum(kwh) FROM solar WHERE time > now() - 1d`) et envoyer « Solaire
+  aujourd'hui : {valeur} kWh ».
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« ne répond pas »** : vérifiez l'adresse et le port depuis la machine de
+  Gladys (`curl -i http://192.168.1.2:8086/ping`). Gladys fait tourner
+  l'intégration dans un conteneur sur un réseau en pont : `localhost` est le
+  conteneur, pas l'hôte.
+- **« accès refusé »** : le jeton, ou l'utilisateur et le mot de passe, sont
+  refusés ; ou le jeton ne peut pas lire ce bucket ou cette base.
+- **« organisation introuvable »**, **« base de données introuvable »** :
+  vérifiez le nom dans la configuration (InfluxDB 2 : l'organisation du
+  jeton).
+- **« certificat refusé »** : cochez **Accepter les certificats auto-signés**.
+- **« l'adresse redirige »** : saisissez l'adresse en `https://`.
+- **« pas d'API InfluxDB de la version choisie à cette adresse »** : un autre
+  service répond là, ou l'API choisie n'est pas celle du serveur (SQL demande
+  InfluxDB 3).
+- **« le résultat n'a aucun nombre »** : la requête ne renvoie que du texte ;
+  choisissez un champ numérique.
+- **Une requête ne montre aucune valeur** : **Tester la connexion** indique
+  quelle requête n'a pas de donnée pour le moment. Essayez-la dans
+  l'interface d'InfluxDB (Data Explorer), ou avec la commande `influx`.
+- **Logs** : dans Gladys, la page de l'intégration montre ses logs. Ajoutez
+  `LOG_LEVEL=debug` pour voir chaque lecture.
+
+## Limites
+
+- 20 requêtes, et 20 séries par requête. Une requête s'exécute à chaque
+  rafraîchissement : bornez-la dans le temps (`WHERE time > now() - 1h`,
+  `range(start: -1h)`) pour qu'InfluxDB ne parcoure pas tout votre historique
+  chaque minute.
+- Lecture seule : les états de Gladys ne peuvent pas être écrits dans InfluxDB
+  depuis une intégration externe.
+- Les requêtes sont gardées dans le volume de données de l'intégration : la
+  réinstaller de zéro les perd (ajoutez-les de nouveau avec les mêmes noms :
+  mêmes appareils).
+- Les valeurs sont arrondies à deux décimales.
+- Une base (InfluxQL, SQL) par configuration ; en InfluxQL, une autre se lit
+  par son nom complet (`"db"."autogen"."measurement"`).
+- InfluxDB Cloud : même API, non testée faute de compte ; attention aux quotas
+  de lecture de votre offre (une requête HTTP par requête et par
+  rafraîchissement).
+- Testée avec les outils de test du SDK Gladys et de vrais serveurs InfluxDB,
+  pas encore dans une vraie instance Gladys : vos retours sont les bienvenus.

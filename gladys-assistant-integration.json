@@ -1,177 +1,783 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "InfluxDB",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your InfluxDB queries (Flux, InfluxQL or SQL) as Gladys sensors: temperature, power, energy…",
+    "fr": "Vos requêtes InfluxDB (Flux, InfluxQL ou SQL) en capteurs Gladys : température, puissance, énergie…",
+    "de": "Deine InfluxDB-Abfragen (Flux, InfluxQL oder SQL) als Gladys-Sensoren: Temperatur, Leistung…",
+    "es": "Sus consultas InfluxDB (Flux, InfluxQL o SQL) como sensores de Gladys: temperatura, potencia…"
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-influxdb:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-influxdb/main/cover.png",
+  "categories": ["services", "energy", "environment"],
   "transports": ["local", "cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your InfluxDB",
+        "fr": "Votre InfluxDB",
+        "de": "Deine InfluxDB",
+        "es": "Su InfluxDB"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Choose the API of your InfluxDB and enter its address and access. Then add your queries with \"Add a query\" below, and the devices to follow from the Discover tab.",
+        "fr": "Choisissez l'API de votre InfluxDB, puis saisissez son adresse et ses accès. Ajoutez ensuite vos requêtes avec « Ajouter une requête » ci-dessous, puis les appareils à suivre depuis l'onglet Découverte.",
+        "de": "Wähle die API deiner InfluxDB und gib ihre Adresse und Zugangsdaten ein. Füge dann deine Abfragen mit „Abfrage hinzufügen“ unten hinzu und die Geräte, denen du folgen willst, im Tab „Entdecken“.",
+        "es": "Elija la API de su InfluxDB e introduzca su dirección y sus accesos. Después añada sus consultas con «Añadir una consulta» más abajo, y los dispositivos que quiera seguir desde la pestaña Descubrir."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-influxdb/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Installationsanleitung",
+            "es": "Guía de instalación"
+          }
+        },
+        {
+          "url": "https://docs.influxdata.com/",
+          "label": {
+            "en": "InfluxDB documentation",
+            "fr": "Documentation d'InfluxDB",
+            "de": "InfluxDB-Dokumentation",
+            "es": "Documentación de InfluxDB"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
-    },
-    {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
+      "key": "api_version",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "API and query language",
+        "fr": "API et langage de requête",
+        "de": "API und Abfragesprache",
+        "es": "API y lenguaje de consulta"
+      },
+      "description": {
+        "en": "InfluxQL also works with InfluxDB 2 (compatibility API) and InfluxDB 3.",
+        "fr": "InfluxQL fonctionne aussi avec InfluxDB 2 (API de compatibilité) et InfluxDB 3.",
+        "de": "InfluxQL funktioniert auch mit InfluxDB 2 (Kompatibilitäts-API) und InfluxDB 3.",
+        "es": "InfluxQL también funciona con InfluxDB 2 (API de compatibilidad) e InfluxDB 3."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "v2",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "v2",
+          "label": {
+            "en": "InfluxDB 2 or Cloud (Flux)",
+            "fr": "InfluxDB 2 ou Cloud (Flux)",
+            "de": "InfluxDB 2 oder Cloud (Flux)",
+            "es": "InfluxDB 2 o Cloud (Flux)"
+          }
+        },
+        {
+          "value": "v1",
+          "label": {
+            "en": "InfluxQL (InfluxDB 1, 2 or 3)",
+            "fr": "InfluxQL (InfluxDB 1, 2 ou 3)",
+            "de": "InfluxQL (InfluxDB 1, 2 oder 3)",
+            "es": "InfluxQL (InfluxDB 1, 2 o 3)"
+          }
+        },
+        {
+          "value": "v3",
+          "label": {
+            "en": "InfluxDB 3 (SQL)",
+            "fr": "InfluxDB 3 (SQL)",
+            "de": "InfluxDB 3 (SQL)",
+            "es": "InfluxDB 3 (SQL)"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "InfluxDB address",
+        "fr": "Adresse d'InfluxDB",
+        "de": "Adresse von InfluxDB",
+        "es": "Dirección de InfluxDB"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Port 8086 by default (8181 for InfluxDB 3). The address of the InfluxDB 2 interface also works.",
+        "fr": "Port 8086 par défaut (8181 pour InfluxDB 3). L'adresse de l'interface d'InfluxDB 2 convient aussi.",
+        "de": "Standardmäßig Port 8086 (8181 für InfluxDB 3). Die Adresse der Oberfläche von InfluxDB 2 geht auch.",
+        "es": "Puerto 8086 por defecto (8181 para InfluxDB 3). La dirección de la interfaz de InfluxDB 2 también sirve."
+      },
+      "placeholder": {
+        "en": "e.g. http://192.168.1.2:8086",
+        "fr": "ex. http://192.168.1.2:8086",
+        "de": "z. B. http://192.168.1.2:8086",
+        "es": "p. ej. http://192.168.1.2:8086"
+      },
+      "required": true
+    },
+    {
+      "key": "organization",
+      "type": "string",
+      "label": {
+        "en": "Organization (InfluxDB 2, Cloud)",
+        "fr": "Organisation (InfluxDB 2, Cloud)",
+        "de": "Organisation (InfluxDB 2, Cloud)",
+        "es": "Organización (InfluxDB 2, Cloud)"
+      },
+      "description": {
+        "en": "Its name, or its id.",
+        "fr": "Son nom, ou son identifiant.",
+        "de": "Name oder ID der Organisation.",
+        "es": "Su nombre, o su identificador."
+      },
+      "placeholder": {
+        "en": "e.g. home",
+        "fr": "ex. maison",
+        "de": "z. B. zuhause",
+        "es": "p. ej. casa"
+      },
+      "required": false
+    },
+    {
+      "key": "database",
+      "type": "string",
+      "label": {
+        "en": "Database (InfluxQL, SQL)",
+        "fr": "Base de données (InfluxQL, SQL)",
+        "de": "Datenbank (InfluxQL, SQL)",
+        "es": "Base de datos (InfluxQL, SQL)"
+      },
+      "description": {
+        "en": "With InfluxDB 2, the name of the bucket.",
+        "fr": "Avec InfluxDB 2, le nom du bucket.",
+        "de": "Bei InfluxDB 2 der Name des Buckets.",
+        "es": "Con InfluxDB 2, el nombre del bucket."
+      },
+      "placeholder": {
+        "en": "e.g. telegraf",
+        "fr": "ex. telegraf",
+        "de": "z. B. telegraf",
+        "es": "p. ej. telegraf"
+      },
+      "required": false
+    },
+    {
+      "key": "auth",
+      "type": "section",
+      "label": {
+        "en": "Access",
+        "fr": "Accès",
+        "de": "Zugang",
+        "es": "Acceso"
+      },
+      "description": {
+        "en": "A read-only token is enough. InfluxDB 1 takes a user and password instead.",
+        "fr": "Un jeton en lecture seule suffit. InfluxDB 1 prend un utilisateur et un mot de passe à la place.",
+        "de": "Ein Token mit Leserechten reicht. InfluxDB 1 nimmt stattdessen Benutzer und Passwort.",
+        "es": "Basta con un token de solo lectura. InfluxDB 1 usa un usuario y una contraseña en su lugar."
+      }
+    },
+    {
+      "key": "token",
+      "type": "secret",
+      "label": {
+        "en": "API token",
+        "fr": "Jeton d'API",
+        "de": "API-Token",
+        "es": "Token de API"
+      },
+      "required": false
+    },
+    {
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "User (InfluxDB 1)",
+        "fr": "Utilisateur (InfluxDB 1)",
+        "de": "Benutzer (InfluxDB 1)",
+        "es": "Usuario (InfluxDB 1)"
+      },
+      "required": false
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password (InfluxDB 1)",
+        "fr": "Mot de passe (InfluxDB 1)",
+        "de": "Passwort (InfluxDB 1)",
+        "es": "Contraseña (InfluxDB 1)"
+      },
+      "required": false
+    },
+    {
+      "key": "options",
+      "type": "section",
+      "label": {
+        "en": "Options",
+        "fr": "Options",
+        "de": "Optionen",
+        "es": "Opciones"
+      }
+    },
+    {
+      "key": "poll_interval",
+      "type": "select",
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often InfluxDB is read: one request per query.",
+        "fr": "Fréquence de lecture d'InfluxDB : une requête HTTP par requête.",
+        "de": "Wie oft InfluxDB gelesen wird: eine Anfrage pro Abfrage.",
+        "es": "Con qué frecuencia se lee InfluxDB: una petición por consulta."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "60",
+      "options": [
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        },
+        {
+          "value": "600",
+          "label": {
+            "en": "10 minutes",
+            "fr": "10 minutes",
+            "de": "10 Minuten",
+            "es": "10 minutos"
+          }
+        }
+      ]
+    },
+    {
+      "key": "allow_self_signed",
+      "type": "boolean",
+      "label": {
+        "en": "Accept self-signed certificates",
+        "fr": "Accepter les certificats auto-signés",
+        "de": "Selbstsignierte Zertifikate akzeptieren",
+        "es": "Aceptar certificados autofirmados"
+      },
+      "description": {
+        "en": "Only for an https:// address whose certificate your browser does not trust either.",
+        "fr": "Seulement pour une adresse en https:// dont le certificat n'est pas reconnu par votre navigateur non plus.",
+        "de": "Nur für eine https://-Adresse, deren Zertifikat auch dein Browser nicht anerkennt.",
+        "es": "Solo para una dirección https:// cuyo certificado tampoco reconoce su navegador."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the messages",
+        "fr": "Langue des messages",
+        "de": "Sprache der Meldungen",
+        "es": "Idioma de los mensajes"
+      },
+      "description": {
+        "en": "Language of the scene results and messages (the feature names come from your tags).",
+        "fr": "Langue des résultats de scène et des messages (les noms des fonctionnalités viennent de vos étiquettes).",
+        "de": "Sprache der Szenen-Ergebnisse und Meldungen (die Funktionsnamen kommen aus deinen Tags).",
+        "es": "Idioma de los resultados de escena y de los mensajes (los nombres de las funciones vienen de sus etiquetas)."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 60
     },
     {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "add_query",
+      "label": {
+        "en": "Add a query",
+        "fr": "Ajouter une requête",
+        "de": "Abfrage hinzufügen",
+        "es": "Añadir una consulta"
+      },
+      "description": {
+        "en": "One device per query, one feature per series. The same name again replaces the query.",
+        "fr": "Un appareil par requête, une fonctionnalité par série. Le même nom remplace la requête.",
+        "de": "Ein Gerät pro Abfrage, eine Funktion pro Serie. Derselbe Name ersetzt die Abfrage.",
+        "es": "Un dispositivo por consulta, una función por serie. El mismo nombre sustituye la consulta."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
+          "key": "name",
+          "type": "string",
+          "label": {
+            "en": "Name",
+            "fr": "Nom",
+            "de": "Name",
+            "es": "Nombre"
+          },
+          "placeholder": {
+            "en": "e.g. Room temperatures",
+            "fr": "ex. Températures des pièces",
+            "de": "z. B. Raumtemperaturen",
+            "es": "p. ej. Temperaturas de las habitaciones"
+          }
+        },
+        {
+          "key": "query",
+          "type": "string",
+          "label": {
+            "en": "Query (Flux, InfluxQL or SQL)",
+            "fr": "Requête (Flux, InfluxQL ou SQL)",
+            "de": "Abfrage (Flux, InfluxQL oder SQL)",
+            "es": "Consulta (Flux, InfluxQL o SQL)"
+          },
+          "description": {
+            "en": "In the language of the chosen API. It must give one value per series: last(), mean()…",
+            "fr": "Dans le langage de l'API choisie. Elle doit donner une valeur par série : last(), mean()…",
+            "de": "In der Sprache der gewählten API. Pro Serie muss ein Wert herauskommen: last(), mean()…",
+            "es": "En el lenguaje de la API elegida. Debe dar un valor por serie: last(), mean()…"
+          },
+          "placeholder": {
+            "en": "e.g. SELECT last(value) FROM temperature GROUP BY room",
+            "fr": "ex. SELECT last(value) FROM temperature GROUP BY room",
+            "de": "z. B. SELECT last(value) FROM temperature GROUP BY room",
+            "es": "p. ej. SELECT last(value) FROM temperature GROUP BY room"
+          }
+        },
+        {
+          "key": "type",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": {
+            "en": "Type",
+            "fr": "Type",
+            "de": "Typ",
+            "es": "Tipo"
+          },
+          "description": {
+            "en": "Empty: Number (no unit).",
+            "fr": "Vide : Nombre (sans unité).",
+            "de": "Leer: Zahl (ohne Einheit).",
+            "es": "Vacío: Número (sin unidad)."
+          },
+          "options": [
+            {
+              "value": "number",
+              "label": {
+                "en": "Number (no unit)",
+                "fr": "Nombre (sans unité)",
+                "de": "Zahl (ohne Einheit)",
+                "es": "Número (sin unidad)"
+              }
+            },
+            {
+              "value": "temperature",
+              "label": {
+                "en": "Temperature (°C)",
+                "fr": "Température (°C)",
+                "de": "Temperatur (°C)",
+                "es": "Temperatura (°C)"
+              }
+            },
+            {
+              "value": "humidity",
+              "label": {
+                "en": "Humidity (%)",
+                "fr": "Humidité (%)",
+                "de": "Luftfeuchtigkeit (%)",
+                "es": "Humedad (%)"
+              }
+            },
+            {
+              "value": "percent",
+              "label": {
+                "en": "Percentage (%)",
+                "fr": "Pourcentage (%)",
+                "de": "Prozent (%)",
+                "es": "Porcentaje (%)"
+              }
+            },
+            {
+              "value": "power",
+              "label": {
+                "en": "Power (W)",
+                "fr": "Puissance (W)",
+                "de": "Leistung (W)",
+                "es": "Potencia (W)"
+              }
+            },
+            {
+              "value": "energy",
+              "label": {
+                "en": "Energy (kWh)",
+                "fr": "Énergie (kWh)",
+                "de": "Energie (kWh)",
+                "es": "Energía (kWh)"
+              }
+            }
+          ]
+        },
+        {
+          "key": "label",
+          "type": "string",
+          "label": {
+            "en": "Tag naming the series (optional)",
+            "fr": "Étiquette qui nomme les séries (facultatif)",
+            "de": "Tag, das die Serien benennt (optional)",
+            "es": "Etiqueta que nombra las series (opcional)"
+          },
+          "description": {
+            "en": "Empty: the tags that differ from one series to the other.",
+            "fr": "Vide : les étiquettes qui changent d'une série à l'autre.",
+            "de": "Leer: die Tags, die sich von Serie zu Serie unterscheiden.",
+            "es": "Vacío: las etiquetas que cambian de una serie a otra."
+          },
+          "placeholder": {
+            "en": "e.g. room",
+            "fr": "ex. room",
+            "de": "z. B. room",
+            "es": "p. ej. room"
+          }
+        }
+      ]
+    },
+    {
+      "key": "remove_query",
+      "label": {
+        "en": "Remove a query",
+        "fr": "Supprimer une requête",
+        "de": "Abfrage entfernen",
+        "es": "Eliminar una consulta"
+      },
+      "description": {
+        "en": "Its device stays in Gladys without new values: delete it there.",
+        "fr": "Son appareil reste dans Gladys sans nouvelles valeurs : supprimez-le là.",
+        "de": "Sein Gerät bleibt ohne neue Werte in Gladys: Lösche es dort.",
+        "es": "Su dispositivo permanece en Gladys sin valores nuevos: elimínelo allí."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "name",
+          "type": "string",
+          "label": {
+            "en": "Name",
+            "fr": "Nom",
+            "de": "Name",
+            "es": "Nombre"
+          }
         }
       ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "server_unreachable",
+      "label": {
+        "en": "InfluxDB is unreachable",
+        "fr": "InfluxDB est injoignable",
+        "de": "InfluxDB ist nicht erreichbar",
+        "es": "InfluxDB no está accesible"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "Two reads in a row fail: no answer, access refused, organization or database not found.",
+        "fr": "Deux lectures de suite échouent : pas de réponse, accès refusé, organisation ou base introuvable.",
+        "de": "Zwei Lesevorgänge nacheinander scheitern: keine Antwort, Zugriff verweigert, Organisation oder Datenbank fehlt.",
+        "es": "Fallan dos lecturas seguidas: sin respuesta, acceso denegado, organización o base no encontrada."
+      },
+      "variables": [
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error",
+            "fr": "Erreur",
+            "de": "Fehler",
+            "es": "Error"
+          }
+        },
+        {
+          "key": "error_kind",
+          "type": "string",
+          "label": {
+            "en": "Error key (unreachable, auth, database…)",
+            "fr": "Clé de l'erreur (unreachable, auth, database…)",
+            "de": "Fehlerschlüssel (unreachable, auth, database…)",
+            "es": "Clave del error (unreachable, auth, database…)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "server_back",
+      "label": {
+        "en": "InfluxDB answers again",
+        "fr": "InfluxDB répond de nouveau",
+        "de": "InfluxDB antwortet wieder",
+        "es": "InfluxDB responde de nuevo"
+      },
+      "description": {
+        "en": "After \"InfluxDB is unreachable\", a read works again.",
+        "fr": "Après « InfluxDB est injoignable », une lecture fonctionne de nouveau.",
+        "de": "Nach „InfluxDB ist nicht erreichbar“ klappt ein Lesevorgang wieder.",
+        "es": "Tras «InfluxDB no está accesible», una lectura vuelve a funcionar."
+      },
+      "variables": [
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "label": {
+            "en": "Outage (minutes)",
+            "fr": "Durée de la panne (minutes)",
+            "de": "Ausfalldauer (Minuten)",
+            "es": "Duración de la caída (minutos)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "query_failed",
+      "label": {
+        "en": "A query fails",
+        "fr": "Une requête échoue",
+        "de": "Eine Abfrage scheitert",
+        "es": "Una consulta falla"
+      },
+      "description": {
+        "en": "InfluxDB refuses a query (syntax, bucket, rights) or it gives no number. Once, until it works again.",
+        "fr": "InfluxDB refuse une requête (syntaxe, bucket, droits) ou elle ne donne aucun nombre. Une fois, jusqu'à ce qu'elle remarche.",
+        "de": "InfluxDB lehnt eine Abfrage ab (Syntax, Bucket, Rechte) oder sie liefert keine Zahl. Einmal, bis sie wieder funktioniert.",
+        "es": "InfluxDB rechaza una consulta (sintaxis, bucket, permisos) o no da ningún número. Una vez, hasta que vuelva a funcionar."
       },
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "key": "name",
+          "type": "string",
+          "label": {
+            "en": "Query name (empty: any)",
+            "fr": "Nom de la requête (vide : n'importe laquelle)",
+            "de": "Name der Abfrage (leer: beliebig)",
+            "es": "Nombre de la consulta (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Exactly as added.",
+            "fr": "Exactement comme à l'ajout.",
+            "de": "Genau wie beim Hinzufügen.",
+            "es": "Exactamente como al añadirla."
+          },
+          "required": false
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Query name",
+            "fr": "Nom de la requête",
+            "de": "Name der Abfrage",
+            "es": "Nombre de la consulta"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error",
+            "fr": "Erreur",
+            "de": "Fehler",
+            "es": "Error"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "query_value",
+      "label": {
+        "en": "Read an InfluxDB value",
+        "fr": "Lire une valeur InfluxDB",
+        "de": "InfluxDB-Wert lesen",
+        "es": "Leer un valor de InfluxDB"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Runs a query once and gives its value, without creating a device.",
+        "fr": "Exécute une requête une fois et donne sa valeur, sans créer d'appareil.",
+        "de": "Führt eine Abfrage einmal aus und liefert den Wert, ohne Gerät anzulegen.",
+        "es": "Ejecuta una consulta una vez y da su valor, sin crear un dispositivo."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "key": "query",
+          "type": "string",
+          "label": {
+            "en": "Query (Flux, InfluxQL or SQL)",
+            "fr": "Requête (Flux, InfluxQL ou SQL)",
+            "de": "Abfrage (Flux, InfluxQL oder SQL)",
+            "es": "Consulta (Flux, InfluxQL o SQL)"
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "value",
+          "type": "number",
+          "label": {
+            "en": "Value (first series, 0 if none)",
+            "fr": "Valeur (première série, 0 si aucune)",
+            "de": "Wert (erste Serie, 0 wenn keine)",
+            "es": "Valor (primera serie, 0 si ninguna)"
+          }
+        },
+        {
+          "key": "series",
+          "type": "number",
+          "label": {
+            "en": "Number of series",
+            "fr": "Nombre de séries",
+            "de": "Anzahl der Serien",
+            "es": "Número de series"
+          }
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "label": {
+            "en": "Values, as text",
+            "fr": "Valeurs, en texte",
+            "de": "Werte als Text",
+            "es": "Valores, como texto"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "values",
+      "label": {
+        "en": "InfluxDB values",
+        "fr": "Valeurs InfluxDB",
+        "de": "InfluxDB-Werte",
+        "es": "Valores de InfluxDB"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "The last value of each query, one row per series.",
+        "fr": "La dernière valeur de chaque requête, une ligne par série.",
+        "de": "Der letzte Wert jeder Abfrage, eine Zeile pro Serie.",
+        "es": "El último valor de cada consulta, una fila por serie."
+      },
+      "icon": "database",
+      "action_timeout_seconds": 30,
+      "settings": [
+        {
+          "key": "queries",
+          "type": "multi_select",
+          "source": "devices",
+          "label": {
+            "en": "Queries (empty: all)",
+            "fr": "Requêtes (vide : toutes)",
+            "de": "Abfragen (leer: alle)",
+            "es": "Consultas (vacío: todas)"
+          },
+          "description": {
+            "en": "Only the devices added to Gladys can be chosen.",
+            "fr": "Seuls les appareils ajoutés à Gladys se choisissent.",
+            "de": "Nur die in Gladys angelegten Geräte sind wählbar.",
+            "es": "Solo se pueden elegir los dispositivos añadidos a Gladys."
+          },
+          "required": false
+        }
+      ]
     }
   ]
 }

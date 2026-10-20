@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "headers": {
+    "content-type": "application/json; charset=utf-8",
+    "x-influxdb-version": "v2.9.1"
+  },
+  "body": "{\"code\":\"invalid\",\"message\":\"compilation failed: error @1:1-1:33: expected RPAREN, got EOF\\n\\nerror @1:27-1:33: expected RPAREN, got EOF\"}"
+}
