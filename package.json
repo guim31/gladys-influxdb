@@ -1,6 +1,6 @@
 {
   "name": "gladys-influxdb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "InfluxDB for Gladys Assistant: Flux, InfluxQL or SQL queries as sensors, scene triggers on failures.",
   "type": "module",

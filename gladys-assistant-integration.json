@@ -8,8 +8,8 @@
     "de": "Deine InfluxDB-Abfragen (Flux, InfluxQL oder SQL) als Gladys-Sensoren: Temperatur, Leistung…",
     "es": "Sus consultas InfluxDB (Flux, InfluxQL o SQL) como sensores de Gladys: temperatura, potencia…"
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/guim31/gladys-influxdb:1.0.0",
+  "version": "1.0.1",
+  "docker_image": "ghcr.io/guim31/gladys-influxdb:1.0.1",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-influxdb/main/cover.png",
   "categories": ["services", "energy", "environment"],
